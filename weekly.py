@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # Add project root to path
 sys.path.insert(0, os.path.dirname(__file__))
 
-from src.scrapers import reddit, hackernews, arxiv, github_trending, google_trends, producthunt, twitter
+from src.scrapers import reddit, hackernews, arxiv, github_trending, google_trends, producthunt
 from src import summarizer, telegram_sender
 
 
@@ -28,7 +28,6 @@ def run():
         "github": lambda: github_trending.fetch(since="weekly"),
         "trends": lambda: google_trends.fetch(timeframe="now 7-d"),
         "producthunt": lambda: producthunt.fetch(),
-        "twitter": lambda: twitter.fetch(hours_back=168),
     }
 
     print("📡 Scraping läuft parallel...")
@@ -53,7 +52,6 @@ def run():
             github=results.get("github", []),
             trends=results.get("trends", []),
             producthunt=results.get("producthunt", []),
-            twitter=results.get("twitter", []),
             date_str=date_str,
             week_number=week_number,
         )
