@@ -6,7 +6,7 @@ import anthropic
 
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
-DAILY_SYSTEM = """Du bist ein präziser KI-Nachrichtenredakteur. Du erhältst Rohdaten aus mehreren Quellen (Reddit, Hacker News, ArXiv, GitHub Trending, Google Trends, ProductHunt) und erstellst ein kompaktes, hochwertiges deutsches Daily Briefing über die heißesten KI-Entwicklungen der letzten 24 Stunden.
+DAILY_SYSTEM = """Du bist ein präziser KI-Nachrichtenredakteur. Du erhältst Rohdaten aus mehreren Quellen (Reddit, Hacker News, ArXiv, GitHub Trending, Google Trends, ProductHunt, X/Twitter) und erstellst ein kompaktes, hochwertiges deutsches Daily Briefing über die heißesten KI-Entwicklungen der letzten 24 Stunden.
 
 Formatierungsregeln:
 - Nutze Telegram Markdown (fett: *text*, kursiv: _text_, Code: `code`)
@@ -15,7 +15,7 @@ Formatierungsregeln:
 - Jeder Punkt: 1-2 Sätze + Link
 - Priorisiere: echte Neuigkeiten > virale Diskussionen > neue Tools > Paper"""
 
-WEEKLY_SYSTEM = """Du bist ein präziser KI-Analyst. Du erhältst Rohdaten aus mehreren Quellen (Reddit, Hacker News, ArXiv, GitHub Trending, Google Trends, ProductHunt) und erstellst einen kompakten, hochwertigen deutschen Weekly Report über die wichtigsten KI-Trends der letzten 7 Tage.
+WEEKLY_SYSTEM = """Du bist ein präziser KI-Analyst. Du erhältst Rohdaten aus mehreren Quellen (Reddit, Hacker News, ArXiv, GitHub Trending, Google Trends, ProductHunt, X/Twitter) und erstellst einen kompakten, hochwertigen deutschen Weekly Report über die wichtigsten KI-Trends der letzten 7 Tage.
 
 Formatierungsregeln:
 - Nutze Telegram Markdown (fett: *text*, kursiv: _text_, Code: `code`)
@@ -44,6 +44,9 @@ DAILY_PROMPT_TEMPLATE = """Heute ist {date}. Hier sind die Rohdaten der letzten 
 ## PRODUCTHUNT (Neue AI-Tools):
 {ph_data}
 
+## X / TWITTER (Virale AI-Tweets):
+{twitter_data}
+
 ---
 
 Erstelle jetzt das Daily Briefing in exakt diesem Format:
@@ -65,7 +68,7 @@ Erstelle jetzt das Daily Briefing in exakt diesem Format:
 *📈 TRENDS (GOOGLE)*
 [Top 3-5 AI-Suchtrends als kommagetrennte Liste]
 
-_Quellen: Reddit · HN · ArXiv · GitHub · Google Trends · ProductHunt_"""
+_Quellen: Reddit · HN · ArXiv · GitHub · Google Trends · ProductHunt · X_"""
 
 WEEKLY_PROMPT_TEMPLATE = """Heute ist {date}. Hier sind die Rohdaten der letzten 7 Tage:
 
@@ -86,6 +89,9 @@ WEEKLY_PROMPT_TEMPLATE = """Heute ist {date}. Hier sind die Rohdaten der letzten
 
 ## PRODUCTHUNT (Neue AI-Tools):
 {ph_data}
+
+## X / TWITTER (Virale AI-Tweets der Woche):
+{twitter_data}
 
 ---
 
@@ -111,7 +117,7 @@ Erstelle jetzt den Weekly Report in exakt diesem Format:
 *💡 TAKE-AWAYS: WAS MUSS MAN IMPLEMENTIEREN/WISSEN?*
 [3-5 Bullet Points: konkrete Handlungsempfehlungen]
 
-_Quellen: Reddit · HN · ArXiv · GitHub · Google Trends · ProductHunt_"""
+_Quellen: Reddit · HN · ArXiv · GitHub · Google Trends · ProductHunt · X_"""
 
 
 def _format_list(items: list[dict], max_items: int = 10) -> str:
@@ -154,6 +160,12 @@ def _format_list(items: list[dict], max_items: int = 10) -> str:
                 f"- {item.get('title')}: {item.get('description', '')} "
                 f"{item.get('url', '')}"
             )
+        elif source == "X (Twitter)":
+            lines.append(
+                f"- {item.get('author')}: {item.get('text', '')[:200]} "
+                f"(❤️{item.get('likes', 0)} 🔁{item.get('retweets', 0)}) "
+                f"{item.get('url', '')}"
+            )
         else:
             lines.append(f"- {json.dumps(item, ensure_ascii=False)[:200]}")
     return "\n".join(lines)
@@ -166,6 +178,7 @@ def generate_daily(
     github: list,
     trends: list,
     producthunt: list,
+    twitter: list,
     date_str: str,
 ) -> str:
     prompt = DAILY_PROMPT_TEMPLATE.format(
@@ -176,6 +189,7 @@ def generate_daily(
         github_data=_format_list(github, 8),
         trends_data=_format_list(trends, 10),
         ph_data=_format_list(producthunt, 8),
+        twitter_data=_format_list(twitter, 8),
     )
 
     response = client.messages.create(
@@ -194,6 +208,7 @@ def generate_weekly(
     github: list,
     trends: list,
     producthunt: list,
+    twitter: list,
     date_str: str,
     week_number: int,
 ) -> str:
@@ -206,6 +221,7 @@ def generate_weekly(
         github_data=_format_list(github, 10),
         trends_data=_format_list(trends, 12),
         ph_data=_format_list(producthunt, 10),
+        twitter_data=_format_list(twitter, 10),
     )
 
     response = client.messages.create(
